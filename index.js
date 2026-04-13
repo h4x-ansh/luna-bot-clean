@@ -13,8 +13,6 @@ const yts = require('yt-search');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { getData } = require('spotify-url-info')(fetch);
 
-require('dotenv').config();
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
