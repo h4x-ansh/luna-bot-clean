@@ -384,9 +384,14 @@ async function playSong(guild, song) {
       highWaterMark: 1 << 25
     });
 
-    const resource = createAudioResource(stream);
+    const resource = createAudioResource(stream, {
+      inlineVolume: true
+    });
 
-    resource.volume.setVolume(q.volume);
+    // set volume safely
+    if (resource.volume) {
+      resource.volume.setVolume(q.volume || 0.5);
+    }
 
     q.player.play(resource);
 
