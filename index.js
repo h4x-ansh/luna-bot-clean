@@ -10,6 +10,7 @@ const {
 
 const play = require('play-dl');
 const yts = require('yt-search');
+const ytdl = require('ytdl-core');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { getData } = require('spotify-url-info')(fetch);
 
@@ -377,12 +378,13 @@ async function playSong(guild, song) {
 
     await new Promise(r => setTimeout(r, 1500));
 
-    const stream = await play.stream(song.url);
-
-    const resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
-      inlineVolume: true
+    const stream = ytdl(song.url, {
+      filter: 'audioonly',
+      quality: 'highestaudio',
+      highWaterMark: 1 << 25
     });
+
+    const resource = createAudioResource(stream);
 
     resource.volume.setVolume(q.volume);
 
