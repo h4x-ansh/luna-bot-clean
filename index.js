@@ -2,7 +2,7 @@ process.on("uncaughtException", console.error);
 process.on("unhandledRejection", console.error);
 
 const { Client, GatewayIntentBits } = require("discord.js");
-const { Manager } = require("erela.js");
+const { Shoukaku, Connectors } = require("shoukaku");
 
 const client = new Client({
   intents: [
@@ -13,157 +13,60 @@ const client = new Client({
   ]
 });
 
-const manager = new Manager({
-  nodes: [
-    {
-      host: "lavalink.lexnet.cc",
-      port: 443,
-      password: "lexnet",
-      secure: true,
-      retryAmount: 5,
-      retryDelay: 5000
-    }
-  ],
-  send(id, payload) {
-    const guild = client.guilds.cache.get(id);
-    if (guild) guild.shard.send(payload);
+const nodes = [
+  {
+    name: "main",
+    url: "lavalink.lexnet.cc:443",
+    auth: "lexnet",
+    secure: true
   }
-});
+];
 
-manager.on("nodeCreate", (node) => {
-  node.options.requestTimeout = 30000;
-  node.options.version = "v4";
-});
+const shoukaku = new Shoukaku(
+  new Connectors.DiscordJS(client),
+  nodes
+);
 
 // READY
-client.on("ready", () => {
+client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  manager.init(client.user.id);
 });
 
 // EVENTS
-manager.on("nodeConnect", () => {
-  console.log("🔥 Lavalink connected");
+shoukaku.on("ready", (name) => {
+  console.log("🔥 Lavalink connected:", name);
 });
 
-manager.on("nodeError", (node, error) => {
+shoukaku.on("error", (name, error) => {
   console.log("❌ Lavalink error:", error.message);
 });
 
-manager.on("trackStart", (player, track) => {
-  const channel = client.channels.cache.get(player.textChannel);
-  if (channel) channel.send(`🎵 Now playing: ${track.title}`);
-});
-
-manager.on("queueEnd", (player) => {
-  const channel = client.channels.cache.get(player.textChannel);
-  if (channel) channel.send("⏸ Queue ended");
-  player.destroy();
-});
-
-// COMMANDS
+// COMMAND
 client.on("messageCreate", async (message) => {
-  if (!message.content.startsWith("!") || message.author.bot) return;
+  if (!message.content.startsWith("!play")) return;
 
-  const args = message.content.slice(1).split(" ");
-  const cmd = args.shift().toLowerCase();
+  const query = message.content.split(" ").slice(1).join(" ");
+  const vc = message.member.voice.channel;
 
-  if (cmd === "play") {
-    const query = args.join(" ");
-    if (!query) return message.reply("Give song name");
+  if (!vc) return message.reply("Join VC");
 
-    const vc = message.member.voice.channel;
-    if (!vc) return message.reply("Join VC first");
+  const node = shoukaku.getNode();
 
-    const player = manager.create({
-      guild: message.guild.id,
-      voiceChannel: vc.id,
-      textChannel: message.channel.id,
-      selfDeafen: true
-    });
+  const player = await node.joinChannel({
+    guildId: message.guild.id,
+    channelId: vc.id,
+    shardId: message.guild.shardId
+  });
 
-    await player.connect();
+  const res = await node.rest.resolve(`ytsearch:${query}`);
 
-    const res = await manager.search(query, message.author);
+  if (!res.tracks.length) return message.reply("No results");
 
-    if (res.loadType === "NO_MATCHES") {
-      return message.reply("❌ No results");
-    }
+  const track = res.tracks[0];
 
-    const track = res.tracks[0];
-    player.queue.add(track);
+  await player.playTrack({ track: track.encoded });
 
-    message.reply(`🎵 Added: ${track.title}`);
-
-    if (!player.playing && !player.paused) {
-      player.play();
-    }
-  }
-
-  if (cmd === "skip") {
-    const player = manager.players.get(message.guild.id);
-    if (player) player.stop();
-  }
-
-  if (cmd === "stop") {
-    const player = manager.players.get(message.guild.id);
-    if (player) {
-      player.destroy();
-      message.reply("⏹ Stopped");
-    }
-  }
-
-  if (cmd === "queue") {
-    const player = manager.players.get(message.guild.id);
-    if (!player || player.queue.length === 0) {
-      return message.reply("📭 Queue is empty");
-    }
-
-    const now = player.queue.current;
-    const nextSongs = player.queue.slice(0, 5);
-
-    const queueStr = nextSongs
-      .map((t, i) => `**${i + 1}.** ${t.title} (${formatTime(t.duration)})`)
-      .join("\n");
-
-    message.reply(`🎧 Queue:\n**Now:** ${now.title}\n\n${queueStr || "No upcoming songs"}`);
-  }
-
-  if (cmd === "pause") {
-    const player = manager.players.get(message.guild.id);
-    if (player) {
-      player.pause(true);
-      message.reply("⏸ Paused");
-    }
-  }
-
-  if (cmd === "resume") {
-    const player = manager.players.get(message.guild.id);
-    if (player) {
-      player.pause(false);
-      message.reply("▶ Resumed");
-    }
-  }
-
-  if (cmd === "volume") {
-    const player = manager.players.get(message.guild.id);
-    if (!player) return;
-
-    const vol = parseInt(args[0]);
-    if (isNaN(vol) || vol < 0 || vol > 100) {
-      return message.reply("Enter 0–100");
-    }
-
-    player.setVolume(vol);
-    message.reply(`🔊 Volume set to ${vol}%`);
-  }
+  message.reply(`🎵 Playing: ${track.info.title}`);
 });
-
-function formatTime(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`; 
-}
 
 client.login(process.env.TOKEN);
