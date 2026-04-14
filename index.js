@@ -1,6 +1,8 @@
 process.on("uncaughtException", console.error);
 process.on("unhandledRejection", console.error);
 
+require('dotenv').config();
+
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { Shoukaku, Connectors } = require("shoukaku");
 
@@ -16,8 +18,8 @@ const client = new Client({
 const nodes = [
   {
     name: "main",
-    url: "lava.link:80",
-    auth: "anything",
+    url: "lavalink.oops.wtf:2000",
+    auth: "www.freelavalink.ga",
     secure: false
   }
 ];
