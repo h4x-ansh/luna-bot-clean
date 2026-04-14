@@ -370,12 +370,17 @@ async function playSong(guild, song) {
     console.log("▶️ Playing:", song.url);
 
     // 🔥 ALWAYS VALIDATE URL
-    if (!song.url || !song.url.startsWith("http")) {
-      console.log("❌ Invalid URL skipped");
+    if (!song.url || !song.url.startsWith("https://")) {
+      console.log("❌ Invalid URL:", song.url);
+
       q.songs.shift();
-      if (q.songs.length > 0) return playSong(guild, q.songs[0]);
+      if (q.songs.length > 0) {
+        return playSong(guild, q.songs[0]);
+      }
       return;
     }
+
+    console.log("DEBUG URL:", song.url);
 
     // 🔥 GET STREAM PROPERLY
     const stream = await play.stream(song.url, {
