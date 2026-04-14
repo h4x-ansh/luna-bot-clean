@@ -10,6 +10,7 @@ const {
 
 const play = require('play-dl');
 const yts = require('yt-search');
+const youtubedl = require('youtube-dl-exec');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { getData } = require('spotify-url-info')(fetch);
 
@@ -369,26 +370,14 @@ async function playSong(guild, song) {
   try {
     console.log("▶️ Playing:", song.url);
 
-    // 🔥 ALWAYS VALIDATE URL
-    if (!song.url || !song.url.startsWith("https://")) {
-      console.log("❌ Invalid URL:", song.url);
-
-      q.songs.shift();
-      if (q.songs.length > 0) {
-        return playSong(guild, q.songs[0]);
-      }
-      return;
-    }
-
-    console.log("DEBUG URL:", song.url);
-
-    // 🔥 GET STREAM PROPERLY
-    const stream = await play.stream(song.url, {
-      discordPlayerCompatibility: true
+    const stream = youtubedl.exec(song.url, {
+      o: '-',
+      q: '',
+      f: 'bestaudio',
+      r: '100K'
     });
 
-    const resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
+    const resource = createAudioResource(stream.stdout, {
       inlineVolume: true
     });
 
@@ -398,7 +387,6 @@ async function playSong(guild, song) {
 
     q.player.play(resource);
 
-    // 🔥 FIX LOOPING / STUCK ISSUE
     q.player.removeAllListeners(AudioPlayerStatus.Idle);
 
     q.player.once(AudioPlayerStatus.Idle, () => {
@@ -414,7 +402,6 @@ async function playSong(guild, song) {
   } catch (err) {
     console.log("❌ STREAM ERROR:", err.message);
 
-    // skip broken song
     q.songs.shift();
     if (q.songs.length > 0) {
       playSong(guild, q.songs[0]);
