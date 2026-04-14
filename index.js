@@ -124,8 +124,7 @@ client.on('messageCreate', async (message) => {
 
           try {
             const results = await play.search(name, {
-              limit: 1,
-              source: { youtube: "music" }
+              limit: 1
             });
 
             if (!results.length) continue;
@@ -156,8 +155,7 @@ client.on('messageCreate', async (message) => {
 
     // 🔍 SMART SEARCH
     const searchResults = await play.search(query, {
-      limit: 1,
-      source: { youtube: "music" }
+      limit: 1
     });
 
     if (!searchResults.length) {
