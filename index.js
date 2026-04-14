@@ -13,18 +13,13 @@ const client = new Client({
   ]
 });
 
-const LAVALINK_HOST = process.env.LAVALINK_HOST || "lavalink-4-production-61d6.up.railway.app";
-const LAVALINK_PORT = parseInt(process.env.LAVALINK_PORT || "443", 10);
-const LAVALINK_SECURE = process.env.LAVALINK_SECURE !== "false";
-const LAVALINK_PASSWORD = process.env.LAVALINK_PASSWORD || "youshallnotpass";
-
 const manager = new Manager({
   nodes: [
     {
-      host: LAVALINK_HOST,
-      port: LAVALINK_PORT,
-      password: LAVALINK_PASSWORD,
-      secure: LAVALINK_SECURE
+      host: "lavalink.lexnet.cc",
+      port: 443,
+      password: "lexnet",
+      secure: true
     }
   ],
   send(id, payload) {
