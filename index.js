@@ -9,10 +9,15 @@ const {
 } = require('@discordjs/voice');
 
 const play = require('play-dl');
-const yts = require('yt-search');
-const youtubedl = require('youtube-dl-exec');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { getData } = require('spotify-url-info')(fetch);
+
+// 🔑 COOKIE BYPASS FOR YOUTUBE
+play.setToken({
+  youtube: {
+    cookie: process.env.YT_COOKIE || ""
+  }
+});
 
 const client = new Client({
   intents: [
@@ -117,16 +122,24 @@ client.on('messageCreate', async (message) => {
         for (const track of data.tracks) {
           const name = `${track.name} ${track.artists.map(a => a.name).join(" ")}`;
 
-          const search = await yts(name);
+          try {
+            const results = await play.search(name, {
+              limit: 1,
+              source: { youtube: "video" }
+            });
 
-          if (!search.videos.length) continue;
+            if (!results.length) continue;
 
-          const video = search.videos[0];
+            const video = results[0];
 
-          q.songs.push({
-            title: video.title,
-            url: `https://www.youtube.com/watch?v=${video.videoId}`
-          });
+            q.songs.push({
+              title: video.title,
+              url: video.url
+            });
+          } catch (e) {
+            console.log("Search error:", e.message);
+            continue;
+          }
         }
 
         if (q.songs.length > 0) {
@@ -142,13 +155,16 @@ client.on('messageCreate', async (message) => {
     }
 
     // 🔍 SMART SEARCH
-    const search = await yts(query);
+    const searchResults = await play.search(query, {
+      limit: 5,
+      source: { youtube: "video" }
+    });
 
-    if (!search.videos.length) {
+    if (!searchResults.length) {
       return message.reply("❌ No results");
     }
 
-    const results = search.videos.slice(0, 5);
+    const results = searchResults;
 
     const list = results.map((v, i) => 
       `**${i + 1}.** ${v.title}`
@@ -178,7 +194,7 @@ client.on('messageCreate', async (message) => {
 
     const song = {
       title: video.title,
-      url: `https://www.youtube.com/watch?v=${video.videoId}`
+      url: video.url
     };
 
     console.log("DEBUG URL:", song.url);
@@ -370,14 +386,12 @@ async function playSong(guild, song) {
   try {
     console.log("▶️ Playing:", song.url);
 
-    const stream = youtubedl.exec(song.url, {
-      o: '-',
-      q: '',
-      f: 'bestaudio',
-      r: '100K'
+    const stream = await play.stream(song.url, {
+      discordPlayerCompatibility: true
     });
 
-    const resource = createAudioResource(stream.stdout, {
+    const resource = createAudioResource(stream.stream, {
+      inputType: stream.type,
       inlineVolume: true
     });
 
