@@ -16,7 +16,7 @@ const client = new Client({
 const nodes = [
   {
     name: "main",
-    url: "lavalink.darrennathanael.com:443",
+    url: "lavalink-replit.replit.app:443",
     auth: "youshallnotpass",
     secure: true
   }
