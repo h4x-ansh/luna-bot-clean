@@ -19,13 +19,20 @@ const manager = new Manager({
       host: "lavalink.lexnet.cc",
       port: 443,
       password: "lexnet",
-      secure: true
+      secure: true,
+      retryAmount: 5,
+      retryDelay: 5000
     }
   ],
   send(id, payload) {
     const guild = client.guilds.cache.get(id);
     if (guild) guild.shard.send(payload);
   }
+});
+
+manager.on("nodeCreate", (node) => {
+  node.options.requestTimeout = 30000;
+  node.options.version = "v4";
 });
 
 // READY
@@ -156,7 +163,7 @@ function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`; 
 }
 
 client.login(process.env.TOKEN);
