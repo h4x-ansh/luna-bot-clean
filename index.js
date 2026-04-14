@@ -36,6 +36,10 @@ manager.on("nodeConnect", () => {
   console.log("🔥 Lavalink connected");
 });
 
+manager.on("nodeError", (node, error) => {
+  console.log("❌ Lavalink error:", error.message);
+});
+
 manager.on("trackStart", (player, track) => {
   const channel = client.channels.cache.get(player.textChannel);
   if (channel) channel.send(`🎵 Now playing: ${track.title}`);
