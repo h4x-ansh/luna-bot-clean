@@ -10,7 +10,6 @@ const {
 
 const play = require('play-dl');
 const yts = require('yt-search');
-const ytdl = require('ytdl-core');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { getData } = require('spotify-url-info')(fetch);
 
@@ -365,71 +364,52 @@ function formatTime(ms) {
 
 async function playSong(guild, song) {
   const q = queues.get(guild.id);
-  if (!song) return;
+  if (!q || !song) return;
 
   try {
     console.log("▶️ Playing:", song.url);
 
-    // 🔥 FORCE VALIDATION
-    if (!play.yt_validate(song.url)) {
-      console.log("❌ Invalid YouTube URL");
+    // 🔥 ALWAYS VALIDATE URL
+    if (!song.url || !song.url.startsWith("http")) {
+      console.log("❌ Invalid URL skipped");
+      q.songs.shift();
+      if (q.songs.length > 0) return playSong(guild, q.songs[0]);
       return;
     }
 
-    await new Promise(r => setTimeout(r, 1500));
-
-    const stream = ytdl(song.url, {
-      filter: 'audioonly',
-      quality: 'highestaudio',
-      highWaterMark: 1 << 25
+    // 🔥 GET STREAM PROPERLY
+    const stream = await play.stream(song.url, {
+      discordPlayerCompatibility: true
     });
 
-    const resource = createAudioResource(stream, {
+    const resource = createAudioResource(stream.stream, {
+      inputType: stream.type,
       inlineVolume: true
     });
 
-    // set volume safely
     if (resource.volume) {
       resource.volume.setVolume(q.volume || 0.5);
     }
 
     q.player.play(resource);
 
-    // 🔥 FAKE PROGRESS SYSTEM
-    let current = 0;
-    const total = 180000; // default 3 min (we fake it)
+    // 🔥 FIX LOOPING / STUCK ISSUE
+    q.player.removeAllListeners(AudioPlayerStatus.Idle);
 
-    if (q.progressInterval) clearInterval(q.progressInterval);
+    q.player.once(AudioPlayerStatus.Idle, () => {
+      q.songs.shift();
 
-    q.progressInterval = setInterval(async () => {
-      current += 5000;
-
-      if (current >= total) {
-        clearInterval(q.progressInterval);
+      if (q.songs.length > 0) {
+        playSong(guild, q.songs[0]);
+      } else {
+        console.log("⏸ Queue ended");
       }
+    });
 
-      const bar = createProgressBar(current, total);
+  } catch (err) {
+    console.log("❌ STREAM ERROR:", err.message);
 
-      try {
-        await q.nowPlayingMsg.edit({
-          embeds: [{
-            color: 0x5865F2,
-            title: "🎵 Now Playing",
-            description: `**${song.title}**\n\n${formatTime(current)} ${bar} ${formatTime(total)}`,
-            footer: { text: "✨ Luna Mode Enabled" }
-          }]
-        });
-      } catch {}
-
-    }, 5000);
-
-  } catch (e) {
-    console.log("❌ STREAM ERROR:", e.message);
-
-    if (q.progressInterval) {
-      clearInterval(q.progressInterval);
-    }
-
+    // skip broken song
     q.songs.shift();
     if (q.songs.length > 0) {
       playSong(guild, q.songs[0]);
