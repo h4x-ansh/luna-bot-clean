@@ -18,9 +18,9 @@ const client = new Client({
 const nodes = [
   {
     name: "main",
-    url: "lavalink.oops.wtf:2000",
-    auth: "www.freelavalink.ga",
-    secure: false
+    url: "lavalink.devamop.in:443",
+    auth: "devamop",
+    secure: true
   }
 ];
 
@@ -30,7 +30,7 @@ const shoukaku = new Shoukaku(
 );
 
 // READY
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
