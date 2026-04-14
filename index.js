@@ -1,3 +1,6 @@
+process.on("uncaughtException", console.error);
+process.on("unhandledRejection", console.error);
+
 const { Client, GatewayIntentBits } = require("discord.js");
 const { Manager } = require("erela.js");
 
