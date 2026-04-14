@@ -16,9 +16,9 @@ const client = new Client({
 const nodes = [
   {
     name: "main",
-    url: "lavalink.darrennathanael.com:443",
-    auth: "youshallnotpass",
-    secure: true
+    url: "lava.link:80",
+    auth: "anything",
+    secure: false
   }
 ];
 
@@ -59,7 +59,7 @@ client.on("messageCreate", async (message) => {
     const vc = message.member.voice.channel;
     if (!vc) return message.reply("Join VC first");
 
-    const node = shoukaku.getNode();
+    const node = shoukaku.nodes.values().next().value;
     if (!node) return message.reply("❌ Lavalink not connected");
 
     const player = await node.joinChannel({
@@ -79,7 +79,8 @@ client.on("messageCreate", async (message) => {
     }
 
     const track = res.tracks[0];
-    player.queue.add(track);
+
+    await player.playTrack({ track: track.encoded });
 
     const embed = new EmbedBuilder()
       .setColor("#5865F2")
@@ -91,35 +92,7 @@ client.on("messageCreate", async (message) => {
       )
       .setFooter({ text: "✨ Luna Mode Enabled" });
 
-    const msg = await message.channel.send({ embeds: [embed] });
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('skip')
-        .setEmoji('⏭')
-        .setStyle(ButtonStyle.Primary),
-
-      new ButtonBuilder()
-        .setCustomId('pause')
-        .setEmoji('⏸')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId('resume')
-        .setEmoji('▶')
-        .setStyle(ButtonStyle.Success),
-
-      new ButtonBuilder()
-        .setCustomId('stop')
-        .setEmoji('⏹')
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    message.channel.send({ components: [row] });
-
-    if (!player.playing && !player.paused) {
-      player.play();
-    }
+    message.channel.send({ embeds: [embed] });
   }
 
   if (cmd === "skip") {
