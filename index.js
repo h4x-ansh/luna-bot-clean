@@ -16,8 +16,8 @@ const client = new Client({
 const nodes = [
   {
     name: "main",
-    url: "lavalink.lexnet.cc:443",
-    auth: "lexnet",
+    url: "lavalink.darrennathanael.com:443",
+    auth: "youshallnotpass",
     secure: true
   }
 ];
