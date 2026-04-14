@@ -61,7 +61,14 @@ client.on('messageCreate', async (message) => {
         adapterCreator: message.guild.voiceAdapterCreator
       });
 
-      await entersState(connection, VoiceConnectionStatus.Ready, 20000);
+      try {
+        await entersState(connection, VoiceConnectionStatus.Ready, 20000);
+      } catch (err) {
+        console.log("❌ Voice connection failed:", err.message);
+        connection.destroy();
+        return message.reply("❌ Failed to join voice channel. Check bot permissions (Connect + Speak).");
+      }
+
       connection.subscribe(player);
 
       q = { connection, player, songs: [], textChannel: message.channel, loop: "off", volume: 0.5 };
@@ -321,7 +328,16 @@ async function playSong(guild, song) {
 
     const stream = await play.stream(song.url, {
       discordPlayerCompatibility: true
+    }).catch(err => {
+      console.log("❌ Stream creation failed:", err.message);
+      q.songs.shift();
+      if (q.songs.length > 0) {
+        return playSong(guild, q.songs[0]);
+      }
+      return;
     });
+
+    if (!stream) return;
 
     const resource = createAudioResource(stream.stream, {
       inputType: stream.type,
