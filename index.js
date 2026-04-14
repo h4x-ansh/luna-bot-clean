@@ -125,7 +125,7 @@ client.on('messageCreate', async (message) => {
           try {
             const results = await play.search(name, {
               limit: 1,
-              source: { youtube: "video" }
+              source: { youtube: "music" }
             });
 
             if (!results.length) continue;
@@ -156,41 +156,15 @@ client.on('messageCreate', async (message) => {
 
     // 🔍 SMART SEARCH
     const searchResults = await play.search(query, {
-      limit: 5,
-      source: { youtube: "video" }
+      limit: 1,
+      source: { youtube: "music" }
     });
 
     if (!searchResults.length) {
       return message.reply("❌ No results");
     }
 
-    const results = searchResults;
-
-    const list = results.map((v, i) => 
-      `**${i + 1}.** ${v.title}`
-    ).join("\n");
-
-    await message.reply(`🎵 Choose a song:\n${list}\n\nType number (1-5)`);
-
-    // WAIT FOR USER RESPONSE
-    const filter = m => m.author.id === message.author.id;
-    const collected = await message.channel.awaitMessages({
-      filter,
-      max: 1,
-      time: 15000
-    }).catch(() => {});
-
-    if (!collected || !collected.first()) {
-      return message.reply("❌ Timeout");
-    }
-
-    const choice = parseInt(collected.first().content);
-
-    if (!choice || choice < 1 || choice > 5) {
-      return message.reply("❌ Invalid choice");
-    }
-
-    const video = results[choice - 1];
+    const video = searchResults[0];
 
     const song = {
       title: video.title,
@@ -205,7 +179,6 @@ client.on('messageCreate', async (message) => {
       .setColor("#5865F2")
       .setTitle("🎧 Now Playing")
       .setDescription(`**${song.title}**`)
-      .setThumbnail(`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`)
       .addFields(
         { name: "Volume", value: `${Math.round(q.volume * 100)}%`, inline: true },
         { name: "Loop", value: q.loop, inline: true }
@@ -385,6 +358,15 @@ async function playSong(guild, song) {
 
   try {
     console.log("▶️ Playing:", song.url);
+
+    if (!song.url.includes("youtube.com")) {
+      console.log("❌ Invalid source skipped");
+      q.songs.shift();
+      if (q.songs.length > 0) {
+        return playSong(guild, q.songs[0]);
+      }
+      return;
+    }
 
     const stream = await play.stream(song.url, {
       discordPlayerCompatibility: true
